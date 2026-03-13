@@ -1,0 +1,19 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Notice: The "url = ..." line is completely gone now!
+}
+
+// THIS IS YOUR FIRST DATABASE TABLE
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique // We will link this to their Clerk account!
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Later, we will add their generated YouTube scripts and blogs here
+}
