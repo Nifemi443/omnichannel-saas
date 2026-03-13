@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SignInButton, SignUpButton, UserButton, Show } from "@clerk/nextjs";
 
 export default function Home() {
   return (
@@ -17,20 +18,45 @@ export default function Home() {
               </div>
               Omni
             </span>
-            <div className="hidden md:flex gap-8 text-sm text-zinc-400 font-medium">
-              <Link href="#platform" className="hover:text-white transition-colors">Platform</Link>
-              <Link href="#infrastructure" className="hover:text-white transition-colors">Infrastructure</Link>
-              <Link href="#pricing" className="hover:text-white transition-colors">Pricing</Link>
+            <div className="hidden md:flex items-center gap-8 text-[13px] tracking-wide font-medium text-zinc-400">
+              <Link href="#platform" className="relative py-1 transition-colors hover:text-zinc-50 group">
+                Platform
+                <span className="absolute inset-x-0 -bottom-1 h-[2px] w-full origin-left scale-x-0 rounded-full bg-indigo-500 transition-transform duration-300 ease-out group-hover:scale-x-100" />
+              </Link>
+              <Link href="#infrastructure" className="relative py-1 transition-colors hover:text-zinc-50 group">
+                Infrastructure
+                <span className="absolute inset-x-0 -bottom-1 h-[2px] w-full origin-left scale-x-0 rounded-full bg-indigo-500 transition-transform duration-300 ease-out group-hover:scale-x-100" />
+              </Link>
+              <Link href="#pricing" className="relative py-1 transition-colors hover:text-zinc-50 group">
+                Pricing
+                <span className="absolute inset-x-0 -bottom-1 h-[2px] w-full origin-left scale-x-0 rounded-full bg-indigo-500 transition-transform duration-300 ease-out group-hover:scale-x-100" />
+              </Link>
             </div>
           </div>
           
+          {/* THE SMART CLERK BUTTONS (NEW SYNTAX) */}
           <div className="flex items-center gap-4">
-            <Link href="#login" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors hidden sm:block">
-              Sign in
-            </Link>
-            <button className="bg-white text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-zinc-200 transition-colors">
-              Start Building
-            </button>
+            {/* Show these if the user is NOT logged in */}
+            <Show when="signed-out">
+              <SignInButton mode="modal">
+                <button className="text-sm font-medium text-zinc-400 hover:text-white transition-colors hidden sm:block">
+                  Sign in
+                </button>
+              </SignInButton>
+              <SignUpButton mode="modal">
+                <button className="bg-white text-black px-4 py-2 rounded-md text-sm font-medium hover:bg-zinc-200 transition-colors">
+                  Start Building
+                </button>
+              </SignUpButton>
+            </Show>
+
+            {/* Show these if the user IS logged in */}
+            <Show when="signed-in">
+              <Link href="/dashboard" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors hidden sm:block mr-2">
+                Go to Dashboard
+              </Link>
+              <UserButton />
+            </Show>
           </div>
         </div>
       </nav>
@@ -38,13 +64,11 @@ export default function Home() {
       {/* HERO SECTION */}
       <section className="relative z-10 pt-40 pb-20 flex flex-col items-center justify-center min-h-[90vh] px-4 text-center">
         
-        {/* STATUS BADGE */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/[0.03] text-xs font-medium text-zinc-300 mb-8 backdrop-blur-sm">
           <span className="flex h-2 w-2 rounded-full bg-indigo-500"></span>
           Omnichannel Engine v2.0
         </div>
 
-        {/* REFINED TYPOGRAPHY */}
         <h1 className="text-5xl md:text-7xl font-bold tracking-tighter max-w-4xl mb-6 leading-[1.1]">
           The infrastructure for <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-b from-white to-white/40">
@@ -56,12 +80,22 @@ export default function Home() {
           An enterprise-grade engine that transcribes, analyzes, and distributes your content across YouTube, TikTok, and web simultaneously.
         </p>
 
-        {/* PROFESSIONAL CALL TO ACTIONS */}
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <button className="bg-white text-black px-6 py-3 rounded-md text-sm font-medium hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
-            Get API Keys
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4"><path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
-          </button>
+          {/* We wrap the main CTA in a SignUpButton so it forces them to create an account! */}
+          <Show when="signed-out">
+            <SignUpButton mode="modal">
+              <button className="bg-white text-black px-6 py-3 rounded-md text-sm font-medium hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+                Get API Keys
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4"><path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path></svg>
+              </button>
+            </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+             <Link href="/dashboard" className="bg-white text-black px-6 py-3 rounded-md text-sm font-medium hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+                Go to Dashboard
+             </Link>
+          </Show>
+          
           <button className="border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] text-white px-6 py-3 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2">
             Read the Docs
           </button>
