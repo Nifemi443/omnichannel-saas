@@ -14,8 +14,7 @@ const fetchInstagramSchema = z.object({
    * Accepts any of:
    *   "@username" | "username" | "https://instagram.com/username"
    */
-  username: z
-    .string({ required_error: "username is required" })
+  username: z.string().min(1, "username is required")
     .min(1, "username cannot be empty")
     .max(30, "Instagram usernames cannot exceed 30 characters")
     .trim(),

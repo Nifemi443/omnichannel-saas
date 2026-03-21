@@ -14,7 +14,7 @@ const fetchYouTubeSchema = z.object({
    *   "@mkbhd" | "mkbhd" | "https://youtube.com/@mkbhd" | "UCBcRF18a7Qf58cCRy5xuWwQ"
    */
   handle: z
-    .string({ required_error: "handle is required" })
+    .string()
     .min(1, "handle cannot be empty")
     .max(200, "handle is too long")
     .trim(),
