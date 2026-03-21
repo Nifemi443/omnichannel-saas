@@ -1,12 +1,15 @@
-import { defineConfig } from '@prisma/config';
-import dotenv from 'dotenv';
+import "dotenv/config";
+import { defineConfig } from "prisma/config";
+import { config } from "dotenv";
+import path from "path";
 
-// Force Prisma to read your Next.js secret vault
-dotenv.config({ path: '.env.local' });
+// Load .env.local so DATABASE_URL is available to the Prisma CLI
+config({ path: path.resolve(__dirname, ".env.local"), override: true });
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: process.env.DATABASE_URL as string,
+    // Use pooler URL for migrations since direct port 5432 is blocked in WSL2
+    url: process.env.DATABASE_URL ?? "",
   },
 });

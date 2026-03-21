@@ -1,87 +1,71 @@
-import { Webhook } from 'svix'
-import { headers } from 'next/headers'
-import { WebhookEvent } from '@clerk/nextjs/server'
-import { PrismaClient } from '@prisma/client'
-import { Pool } from 'pg'
-import { PrismaPg } from '@prisma/adapter-pg'
+import { Webhook } from "svix"
+import { headers } from "next/headers"
+import { WebhookEvent } from "@clerk/nextjs/server"
+import { prisma } from "@/lib/prisma"
 
-// PRISMA V7 ARCHITECTURE: Initialize the Postgres Adapter
-const pool = new Pool({ connectionString: process.env.DATABASE_URL })
-const adapter = new PrismaPg(pool as any)
+export const dynamic = "force-dynamic"
 
-// Initialize Prisma with the new adapter
-const prisma = new PrismaClient({ adapter })
-
-export async function POST(req: Request) {
-  // We will get this secret key from Clerk in the next step
+export async function POST(request: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET
 
   if (!WEBHOOK_SECRET) {
-    throw new Error('Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env or .env.local')
+    console.error("CLERK_WEBHOOK_SECRET is not set")
+    return new Response("Server misconfiguration", { status: 500 })
   }
 
-  // Get the headers to verify the message is actually from Clerk
   const headerPayload = await headers()
-  const svix_id = headerPayload.get("svix-id")
-  const svix_timestamp = headerPayload.get("svix-timestamp")
-  const svix_signature = headerPayload.get("svix-signature")
+  const svixId = headerPayload.get("svix-id")
+  const svixTimestamp = headerPayload.get("svix-timestamp")
+  const svixSignature = headerPayload.get("svix-signature")
 
-  // If there are no headers, error out
-  if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response('Error occured -- no svix headers', {
-      status: 400
-    })
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return new Response("Missing svix headers", { status: 400 })
   }
 
-  // Get the raw body of the message
-  const payload = await req.json()
-  const body = JSON.stringify(payload)
+  const body = await request.text()
 
-  // Create a new Svix instance with your secret
   const wh = new Webhook(WEBHOOK_SECRET)
-
   let evt: WebhookEvent
 
-  // Verify the payload mathematically
   try {
     evt = wh.verify(body, {
-      "svix-id": svix_id,
-      "svix-timestamp": svix_timestamp,
-      "svix-signature": svix_signature,
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
     }) as WebhookEvent
   } catch (err) {
-    console.error('Error verifying webhook:', err)
-    return new Response('Error occured', {
-      status: 400
-    })
+    console.error("Clerk webhook signature verification failed:", err)
+    return new Response("Invalid signature", { status: 400 })
   }
 
-  // THE MAGIC HAPPENS HERE
-  const eventType = evt.type
+  if (evt.type !== "user.created") {
+    return new Response("Event ignored", { status: 200 })
+  }
 
-  // If a brand new user just signed up...
-  if (eventType === 'user.created') {
-    const { id, email_addresses } = evt.data
+  const { id: clerkId, email_addresses } = evt.data
 
-    if (!id || !email_addresses) {
-      return new Response('Error occurred -- missing data', {
-        status: 400
-      })
-    }
+  if (!clerkId || !email_addresses?.length) {
+    return new Response("Missing user data in payload", { status: 400 })
+  }
 
-    // Prepare the data to match our Prisma schema
-    const user = {
-      clerkId: id,
-      email: email_addresses[0].email_address,
-    }
+  const primaryEmail = email_addresses[0].email_address
 
-    // Save the user into Supabase!
+  try {
     await prisma.user.create({
-      data: user,
+      data: {
+        clerkId,
+        email: primaryEmail,
+        plan: "free",
+        processingMinsUsed: 0,
+        processingMinsLimit: 60,
+      },
     })
-    
-    console.log(`Successfully saved user ${user.email} to database!`)
-  }
 
-  return new Response('', { status: 200 })
+    console.log(`User created: ${primaryEmail} (clerkId: ${clerkId})`)
+    return new Response("User created", { status: 200 })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error"
+    console.error("Failed to create user in database:", message)
+    return new Response(`Database error: ${message}`, { status: 500 })
+  }
 }

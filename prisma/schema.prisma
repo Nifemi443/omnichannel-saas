@@ -4,16 +4,68 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Notice: The "url = ..." line is completely gone now!
 }
 
-// THIS IS YOUR FIRST DATABASE TABLE
+enum ProjectStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum Platform {
+  YOUTUBE_SHORTS
+  TIKTOK
+}
+
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique // We will link this to their Clerk account!
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  // Later, we will add their generated YouTube scripts and blogs here
+  id                  String    @id @default(cuid())
+  clerkId             String    @unique
+  email               String    @unique
+  plan                String    @default("free")
+  processingMinsUsed  Int       @default(0)
+  processingMinsLimit Int       @default(60)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  projects            Project[]
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  userId      String
+  originalUrl String
+  title       String?
+  status      ProjectStatus @default(PROCESSING)
+  transcript  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clips       Clip[]
+}
+
+model Clip {
+  id            String        @id @default(cuid())
+  projectId     String
+  cloudinaryUrl String?
+  platform      Platform
+  startTime     Float
+  endTime       Float
+  hookScore     Float?
+  caption       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  seoMetadata   SeoMetadata[]
+}
+
+model SeoMetadata {
+  id          String   @id @default(cuid())
+  clipId      String
+  platform    Platform
+  title       String?
+  description String?
+  hashtags    String[]
+  keywords    String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  clip        Clip     @relation(fields: [clipId], references: [id], onDelete: Cascade)
 }
