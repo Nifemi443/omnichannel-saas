@@ -57,11 +57,11 @@ export function withApiGateway(handler: ApiHandler) {
 
     const rateLimitHeaders = {
       "X-RateLimit-Remaining": String(rateResult.remaining),
-      "X-RateLimit-Reset": String(rateResult.resetAt),
+      "X-RateLimit-Reset": String(Date.now() + rateResult.resetIn),
     }
 
     if (!rateResult.success) {
-      const retryAfter = Math.ceil((rateResult.resetAt - Date.now()) / 1000)
+      const retryAfter = Math.ceil(rateResult.resetIn / 1000)
       return NextResponse.json(
         { error: "Too many requests. Please slow down." },
         {
