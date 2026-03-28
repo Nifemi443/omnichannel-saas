@@ -126,6 +126,8 @@ export default function DashboardPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
   // Process States: 'idle' | 'processing' | 'complete'
   const [processStatus, setProcessStatus] = useState<'idle' | 'processing' | 'complete'>('idle');
@@ -133,6 +135,24 @@ export default function DashboardPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch existing projects on mount
+  useEffect(() => {
+    async function loadProjects() {
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) {
+          const data = await res.json();
+          setProjects(data.projects ?? []);
+        }
+      } catch {
+        // Non-fatal — silently fail, empty state will show
+      } finally {
+        setProjectsLoading(false);
+      }
+    }
+    loadProjects();
+  }, []);
 
   // Auto-scroll terminal
   useEffect(() => {
@@ -178,6 +198,8 @@ export default function DashboardPage() {
 
       project = data.project;
       setCurrentProject(project);
+      // Prepend to Recent Projects immediately — no refetch needed
+      setProjects(prev => [project, ...prev]);
     } catch {
       setApiError("Network error. Please check your connection and try again.");
       return;
@@ -394,6 +416,9 @@ export default function DashboardPage() {
                 </form>
               )}
 
+              {/* Fixed-height container prevents layout shift when switching states */}
+              <div className="min-h-[220px]">
+
               {/* State 1: IDLE (Drag & Drop) */}
               {processStatus === 'idle' && (
                 <div className="animate-fade-in">
@@ -456,8 +481,8 @@ export default function DashboardPage() {
                       );
                     })}
                   </div>
-                  {/* Right: Console */}
-                  <div className="flex-1 bg-black rounded-lg border border-white/[0.06] p-3 font-mono text-[10px] text-zinc-400 relative overflow-hidden flex flex-col h-48 sm:h-auto">
+                  {/* Right: Console — fixed height on all breakpoints to prevent layout growth */}
+                  <div className="flex-1 bg-black rounded-lg border border-white/[0.06] p-3 font-mono text-[10px] text-zinc-400 relative overflow-hidden flex flex-col h-48">
                     <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/5">
                       <Terminal className="w-3 h-3 text-zinc-600" />
                       <span className="text-zinc-600 font-semibold tracking-wider text-[9px]">SYSTEM_LOGS</span>
@@ -522,6 +547,8 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
+
+              </div>{/* end min-h container */}
 
             </div>
           </div>
@@ -635,23 +662,54 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Empty State */}
-          <div className="p-16 flex flex-col items-center justify-center text-center">
-            <div className="w-16 h-16 rounded-2xl bg-zinc-900/80 border border-white/5 flex items-center justify-center mb-5">
-              <FileVideo className="w-7 h-7 text-zinc-700" />
+          {/* Empty State or Projects List */}
+          {projectsLoading ? (
+            <div className="p-10 flex items-center justify-center">
+              <div className="w-5 h-5 border-2 border-zinc-700 border-t-zinc-400 rounded-full animate-spin" />
             </div>
-            <p className="text-white font-semibold mb-2">No projects yet</p>
-            <p className="text-zinc-500 text-sm max-w-sm mb-6 leading-relaxed">
-              Paste a YouTube link or upload a video to generate algorithm-ready clips, captions, and SEO metadata.
-            </p>
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="bg-white hover:bg-zinc-200 text-black px-5 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create First Project
-            </button>
-          </div>
+          ) : projects.length === 0 ? (
+            <div className="p-16 flex flex-col items-center justify-center text-center">
+              <div className="w-16 h-16 rounded-2xl bg-zinc-900/80 border border-white/5 flex items-center justify-center mb-5">
+                <FileVideo className="w-7 h-7 text-zinc-700" />
+              </div>
+              <p className="text-white font-semibold mb-2">No projects yet</p>
+              <p className="text-zinc-500 text-sm max-w-sm mb-6 leading-relaxed">
+                Paste a YouTube link or upload a video to generate algorithm-ready clips, captions, and SEO metadata.
+              </p>
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                className="bg-white hover:bg-zinc-200 text-black px-5 py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Create First Project
+              </button>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/[0.04]">
+              {projects.map((p) => (
+                <div key={p.id} className="px-6 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors">
+                  <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0">
+                    <FileVideo className="w-4 h-4 text-zinc-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-zinc-200 truncate">
+                      {p.title ?? p.originalUrl}
+                    </p>
+                    <p className="text-[11px] text-zinc-600 mt-0.5">
+                      {new Date(p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                    p.status === "COMPLETED"  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
+                    p.status === "PROCESSING" ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20" :
+                                                "bg-red-500/10 text-red-400 border border-red-500/20"
+                  }`}>
+                    {p.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Platform Distribution ── */}
