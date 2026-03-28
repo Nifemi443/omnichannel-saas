@@ -12,12 +12,9 @@ export const dynamic = "force-dynamic"
 // ── Request schema ────────────────────────────────────────────────────────────
 
 const analyzeSchema = z.object({
-  platform: z.enum(["youtube", "instagram"], {
-    required_error: "platform is required",
-    invalid_type_error: "platform must be 'youtube' or 'instagram'",
-  }),
+  platform: z.enum(["youtube", "instagram"]),
   handle: z
-    .string({ required_error: "handle is required" })
+    .string()
     .min(1, "handle cannot be empty")
     .max(200, "handle is too long")
     .trim(),
